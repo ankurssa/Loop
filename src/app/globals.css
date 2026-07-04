@@ -1,0 +1,188 @@
+@import "tailwindcss";
+
+@theme inline {
+  /* ── Virtus-inspired Palette (wired to runtime CSS variables) ── */
+  --color-sooty: var(--sooty);
+  --color-dire-wolf: var(--dire-wolf);
+  --color-brownish-black: var(--brownish-black);
+  --color-black-oak: var(--black-oak);
+  --color-chestnut: var(--chestnut);
+  --color-fiery-orange: var(--fiery-orange);
+
+  /* ── Semantic tokens ── */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+
+  /* ── Status / severity colors ── */
+  --color-status-blocking: #FF5252;
+  --color-status-minor: #FFB142;
+  --color-status-nice: #2ED573;
+
+  /* ── Source colors ── */
+  --color-source-slack: #7C5CFC;
+  --color-source-figma: #4E9AF1;
+  --color-source-manual: #9E9D9D;
+
+  /* ── Column accent colors ── */
+  --color-col-open: var(--col-open);
+  --color-col-progress: var(--col-progress);
+  --color-col-resolved: var(--col-resolved);
+  --color-col-wontfix: var(--col-wontfix);
+
+  /* ── Fonts ── */
+  --font-sans: var(--font-montserrat);
+}
+
+/* ── Default Dark Theme Variables ── */
+:root, html, html[data-theme="dark"] {
+  --sooty: #111111;
+  --dire-wolf: #1A1919;
+  --brownish-black: #242323;
+  --black-oak: #333232;
+  --chestnut: #9E9D9D;
+  --fiery-orange: #E04F16;
+
+  --background: #111111;
+  --foreground: #F5F5F5;
+  --surface: #1A1919;
+  --surface-elevated: #242323;
+  --border: rgba(255, 255, 255, 0.07);
+  --muted: #9E9D9D;
+  --accent: #E04F16;
+  --accent-hover: #F15A24;
+
+  --col-open: #E04F16;
+  --col-progress: #4E9AF1;
+  --col-resolved: #2ED573;
+  --col-wontfix: #9E9D9D;
+}
+
+/* ── JC Brand Theme Override (Pure White Background + #41CFCB Cyan Mint Active) ── */
+html[data-theme="jc-brand"] {
+  /* Background & Surfaces (Neutral Base & Surface) */
+  --sooty: #FFFFFF;
+  --dire-wolf: #FFFFFF;
+  --brownish-black: #F1F5F9;
+  --black-oak: #E2E8F0;
+  --chestnut: #64748B;
+  
+  /* Brand Active (#41CFCB Cyan Mint) */
+  --fiery-orange: #41CFCB;
+  --accent: #41CFCB;
+  --accent-hover: #35B3B0;
+
+  /* Semantic mappings */
+  --background: #FFFFFF;
+  --foreground: #0F172A;
+  --surface: #FFFFFF;
+  --surface-elevated: #F1F5F9;
+  --border: rgba(15, 23, 42, 0.08);
+  --muted: #64748B;
+  /* Note: Status & Column accent colors (--col-open, etc.) inherit directly from Dark theme! */
+}
+
+/* Smart contrast overrides for JC Brand light theme */
+html[data-theme="jc-brand"] .text-white:not(.bg-accent *):not([class*="bg-status-"] *):not([class*="bg-col-"] *) {
+  color: #0F172A !important;
+}
+html[data-theme="jc-brand"] [class*="border-white"] {
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+html[data-theme="jc-brand"] [class*="bg-white"] {
+  background-color: rgba(15, 23, 42, 0.04) !important;
+}
+html[data-theme="jc-brand"] .bg-dire-wolf\/60 {
+  background-color: #F1F5F9 !important;
+}
+html[data-theme="jc-brand"] .bg-accent,
+html[data-theme="jc-brand"] .bg-accent * {
+  color: #0F172A !important;
+}
+html[data-theme="jc-brand"] .text-accent {
+  color: #41CFCB !important;
+}
+
+/* Card & surface refinement: 2px border and distinct background contrast */
+html[data-theme="jc-brand"] .bg-dire-wolf.border {
+  border-width: 2px !important;
+  border-color: rgba(15, 23, 42, 0.12) !important;
+}
+html[data-theme="jc-brand"] .bg-dire-wolf.border:hover {
+  border-color: rgba(15, 23, 42, 0.25) !important;
+}
+
+/* Clean light-mode shadows (override dark black shadows & weird hover elevations) */
+html[data-theme="jc-brand"] [class*="shadow-black"] {
+  --tw-shadow-color: rgba(15, 23, 42, 0.08) !important;
+}
+html[data-theme="jc-brand"] .shadow-2xl,
+html[data-theme="jc-brand"] .shadow-xl,
+html[data-theme="jc-brand"] .shadow-lg,
+html[data-theme="jc-brand"] .shadow-md,
+html[data-theme="jc-brand"] [class*="shadow-black"] {
+  box-shadow: 0 4px 15px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -1px rgba(15, 23, 42, 0.03) !important;
+}
+html[data-theme="jc-brand"] [class*="hover\:shadow"]:hover {
+  box-shadow: 0 12px 28px -4px rgba(15, 23, 42, 0.12), 0 4px 12px -2px rgba(15, 23, 42, 0.06) !important;
+}
+
+/* ── Base ── */
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Typography scale (Montserrat hierarchy) ── */
+h1 {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+h2 {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+h3 {
+  font-weight: 600;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-black-oak);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-chestnut);
+}
+
+/* ── Focus ring ── */
+*:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* ── Selection ── */
+::selection {
+  background-color: var(--color-accent);
+  color: var(--color-foreground);
+}
