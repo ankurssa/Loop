@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronDown, Search, X, Menu, Plus, Palette, LogOut } from 'lucide-react';
 import AddFeedbackModal from '@/components/shared/AddFeedbackModal';
 
@@ -34,7 +34,6 @@ export default function Topbar({
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'jc-brand'>('dark');
-  const profileMenuRef = useRef<HTMLDivElement>(null);
 
   const [authUser, setAuthUser] = useState({
     displayName: 'Anil Kumar M',
@@ -65,20 +64,6 @@ export default function Topbar({
     localStorage.setItem('loop-theme', newTheme);
     setProfileMenuOpen(false);
   };
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
-        setProfileMenuOpen(false);
-      }
-    }
-    if (profileMenuOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [profileMenuOpen]);
 
   const currentLabel = projectOptions.find((p) => p.value === selectedProject)?.label || 'All Projects';
 
@@ -130,34 +115,37 @@ export default function Topbar({
               <div className="relative">
                 <button
                   onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className="flex items-center gap-2 px-3 py-2 rounded-xl bg-dire-wolf border border-white/[0.06] text-white font-bold text-xs hover:border-accent transition-all duration-200 shadow-inner"
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl bg-dire-wolf border border-white/[0.06] text-white font-bold text-xs hover:border-accent transition-all duration-200 shadow-inner cursor-pointer"
                 >
                   <span className="max-w-[100px] truncate">{currentLabel}</span>
                   <ChevronDown size={14} className="text-chestnut" />
                 </button>
 
                 {dropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-44 bg-dire-wolf border border-white/[0.08] rounded-2xl shadow-2xl shadow-black/50 py-1.5 z-50 animate-fade-in">
-                    {projectOptions.map((proj) => (
-                      <button
-                        key={proj.value}
-                        onClick={() => {
-                          onProjectChange && onProjectChange(proj.value);
-                          setDropdownOpen(false);
-                        }}
-                        className={`w-full text-left px-3.5 py-2 text-xs font-bold transition-colors flex items-center justify-between ${
-                          selectedProject === proj.value
-                            ? 'bg-accent/15 text-accent'
-                            : 'text-neutral-300 hover:bg-white/[0.04] hover:text-white'
-                        }`}
-                      >
-                        <span>{proj.label}</span>
-                        {selectedProject === proj.value && (
-                          <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-                        )}
-                      </button>
-                    ))}
-                  </div>
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setDropdownOpen(false)} />
+                    <div className="absolute right-0 mt-2 w-44 bg-dire-wolf border border-white/[0.08] rounded-2xl shadow-2xl shadow-black/50 py-1.5 z-50 animate-fade-in">
+                      {projectOptions.map((proj) => (
+                        <button
+                          key={proj.value}
+                          onClick={() => {
+                            onProjectChange && onProjectChange(proj.value);
+                            setDropdownOpen(false);
+                          }}
+                          className={`w-full text-left px-3.5 py-2 text-xs font-bold transition-colors flex items-center justify-between cursor-pointer ${
+                            selectedProject === proj.value
+                              ? 'bg-accent/15 text-accent'
+                              : 'text-neutral-300 hover:bg-white/[0.04] hover:text-white'
+                          }`}
+                        >
+                          <span>{proj.label}</span>
+                          {selectedProject === proj.value && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </>
                 )}
               </div>
 
@@ -173,11 +161,7 @@ export default function Topbar({
           )}
 
           {/* 4. User Profile Avatar */}
-          <div
-            className="relative pl-1 sm:pl-2 border-l border-white/[0.08] flex items-center"
-            ref={profileMenuRef}
-            onMouseLeave={() => setProfileMenuOpen(false)}
-          >
+          <div className="relative pl-1 sm:pl-2 border-l border-white/[0.08] flex items-center">
             <button
               onClick={() => setProfileMenuOpen(!profileMenuOpen)}
               className="w-9 h-9 rounded-xl bg-gradient-to-tr from-accent to-[#F97316] p-[2px] cursor-pointer shadow-md shadow-accent/20 hover:scale-105 active:scale-95 transition-all duration-200"
@@ -190,7 +174,9 @@ export default function Topbar({
 
             {/* Profile Dropdown Menu */}
             {profileMenuOpen && (
-              <div className="absolute right-0 top-12 w-56 bg-dire-wolf border border-white/[0.1] rounded-2xl shadow-2xl shadow-black/60 py-2 z-50 animate-fade-in divide-y divide-white/[0.06]">
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setProfileMenuOpen(false)} />
+                <div className="absolute right-0 top-12 w-56 bg-dire-wolf border border-white/[0.1] rounded-2xl shadow-2xl shadow-black/60 py-2 z-50 animate-fade-in divide-y divide-white/[0.06]">
                 {/* Header: User Info */}
                 <div className="px-3.5 py-2.5 mb-1 bg-sooty/50 mx-1.5 rounded-xl border border-white/[0.04]">
                   <p className="text-xs font-extrabold text-white truncate">{authUser.displayName}</p>
@@ -253,6 +239,7 @@ export default function Topbar({
                   </button>
                 </div>
               </div>
+              </>
             )}
           </div>
         </div>
