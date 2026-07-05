@@ -107,12 +107,13 @@ export default function DigestPage() {
 
             <button
               onClick={() => setSlackModalOpen(true)}
-              className="flex items-center gap-2.5 px-5 py-2.5 rounded-xl bg-[#4A154B] hover:bg-[#611f69] border border-[#7C5CFC]/40 text-xs font-bold text-white transition-all shadow-xl hover:shadow-[#7C5CFC]/30 group shrink-0"
+              style={{ color: '#FFFFFF' }}
+              className="flex items-center gap-2.5 px-5 py-2.5 rounded-xl bg-[#4A154B] hover:bg-[#611f69] border border-[#7C5CFC]/50 text-xs font-bold transition-all shadow-xl hover:shadow-[#7C5CFC]/30 group shrink-0 cursor-pointer"
             >
-              <div className="w-6 h-6 rounded-lg bg-white/10 flex items-center justify-center group-hover:scale-11 transition-transform">
-                <MessageSquare size={13} className="text-white" />
+              <div className="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center group-hover:scale-11 transition-transform">
+                <MessageSquare size={13} style={{ color: '#FFFFFF' }} className="text-white" />
               </div>
-              <span>Share Digest via Slack...</span>
+              <span className="font-bold tracking-wide" style={{ color: '#FFFFFF' }}>Share Digest via Slack...</span>
             </button>
           </div>
 

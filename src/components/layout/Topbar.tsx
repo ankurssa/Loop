@@ -36,6 +36,12 @@ export default function Topbar({
   const [theme, setTheme] = useState<'dark' | 'jc-brand'>('dark');
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
+  const [authUser, setAuthUser] = useState({
+    displayName: 'Anil Kumar M',
+    email: 'anilkumar.mallemuri@jumpcloud.com',
+    avatar: 'AK',
+  });
+
   useEffect(() => {
     const savedTheme = localStorage.getItem('loop-theme') as 'dark' | 'jc-brand';
     if (savedTheme === 'dark' || savedTheme === 'jc-brand') {
@@ -44,6 +50,13 @@ export default function Topbar({
     } else {
       document.documentElement.setAttribute('data-theme', 'dark');
     }
+
+    try {
+      const savedUser = localStorage.getItem('loop-auth-user');
+      if (savedUser) {
+        setAuthUser(JSON.parse(savedUser));
+      }
+    } catch (e) {}
   }, []);
 
   const handleThemeChange = (newTheme: 'dark' | 'jc-brand') => {
@@ -160,14 +173,18 @@ export default function Topbar({
           )}
 
           {/* 4. User Profile Avatar */}
-          <div className="relative pl-1 sm:pl-2 border-l border-white/[0.08] flex items-center" ref={profileMenuRef}>
+          <div
+            className="relative pl-1 sm:pl-2 border-l border-white/[0.08] flex items-center"
+            ref={profileMenuRef}
+            onMouseLeave={() => setProfileMenuOpen(false)}
+          >
             <button
               onClick={() => setProfileMenuOpen(!profileMenuOpen)}
               className="w-9 h-9 rounded-xl bg-gradient-to-tr from-accent to-[#F97316] p-[2px] cursor-pointer shadow-md shadow-accent/20 hover:scale-105 active:scale-95 transition-all duration-200"
               title="User Profile & Settings"
             >
               <div className="w-full h-full bg-sooty rounded-[10px] flex items-center justify-center">
-                <span className="text-xs font-extrabold text-white tracking-tighter">AK</span>
+                <span className="text-xs font-extrabold text-white tracking-tighter">{authUser.avatar}</span>
               </div>
             </button>
 
@@ -176,8 +193,8 @@ export default function Topbar({
               <div className="absolute right-0 top-12 w-56 bg-dire-wolf border border-white/[0.1] rounded-2xl shadow-2xl shadow-black/60 py-2 z-50 animate-fade-in divide-y divide-white/[0.06]">
                 {/* Header: User Info */}
                 <div className="px-3.5 py-2.5 mb-1 bg-sooty/50 mx-1.5 rounded-xl border border-white/[0.04]">
-                  <p className="text-xs font-extrabold text-white truncate">Ankur</p>
-                  <p className="text-[10px] font-medium text-chestnut truncate">ankur@jumpcloud.com</p>
+                  <p className="text-xs font-extrabold text-white truncate">{authUser.displayName}</p>
+                  <p className="text-[10px] font-medium text-chestnut truncate">{authUser.email}</p>
                 </div>
 
                 {/* Item 1: Theme Selector (Dark | JC Brand) */}
@@ -195,7 +212,7 @@ export default function Topbar({
                   <div className="grid grid-cols-2 gap-1.5 p-1 bg-sooty rounded-xl border border-white/[0.06]">
                     <button
                       onClick={() => handleThemeChange('dark')}
-                      className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-bold transition-all ${
+                      className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                         theme === 'dark'
                           ? 'bg-[#E04F16] text-white shadow-md shadow-[#E04F16]/20'
                           : 'text-chestnut hover:text-white hover:bg-white/[0.04]'
@@ -207,7 +224,7 @@ export default function Topbar({
 
                     <button
                       onClick={() => handleThemeChange('jc-brand')}
-                      className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-bold transition-all ${
+                      className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                         theme === 'jc-brand'
                           ? 'bg-[#41CFCB] text-[#0F172A] shadow-md shadow-[#41CFCB]/25'
                           : 'text-chestnut hover:text-white hover:bg-white/[0.04]'
@@ -224,12 +241,15 @@ export default function Topbar({
                   <button
                     onClick={() => {
                       setProfileMenuOpen(false);
-                      alert('Logged out successfully (Demo)');
+                      try {
+                        localStorage.removeItem('loop-auth-user');
+                      } catch (e) {}
+                      window.location.href = '/login';
                     }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-status-blocking hover:bg-status-blocking/10 transition-all text-left"
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-status-blocking hover:bg-status-blocking/10 transition-all text-left cursor-pointer"
                   >
                     <LogOut size={15} />
-                    <span>Logout</span>
+                    <span>Sign Out</span>
                   </button>
                 </div>
               </div>

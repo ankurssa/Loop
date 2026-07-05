@@ -88,20 +88,34 @@ html[data-theme="jc-brand"] {
 }
 
 /* Smart contrast overrides for JC Brand light theme */
-html[data-theme="jc-brand"] .text-white:not(.bg-accent *):not([class*="bg-status-"] *):not([class*="bg-col-"] *) {
+html[data-theme="jc-brand"] .text-white:not(.bg-accent *):not([class*="bg-status-"] *):not([class*="bg-col-"] *):not([class*="bg-[#"] *):not([style*="color: #FFFFFF"]):not([style*="color: #ffffff"]):not([style*="color:#fff"]),
+html[data-theme="jc-brand"] [class*="hover:text-white"]:hover:not(.bg-accent *):not([class*="bg-status-"] *):not([class*="bg-col-"] *):not([class*="bg-[#"] *):not([style*="color: #FFFFFF"]):not([style*="color: #ffffff"]):not([style*="color:#fff"]),
+html[data-theme="jc-brand"] .group:hover [class*="group-hover:text-white"]:not(.bg-accent *):not([class*="bg-status-"] *):not([class*="bg-col-"] *):not([class*="bg-[#"] *):not([style*="color: #FFFFFF"]):not([style*="color: #ffffff"]):not([style*="color:#fff"]),
+html[data-theme="jc-brand"] [class*="focus:text-white"]:focus:not(.bg-accent *):not([class*="bg-status-"] *):not([class*="bg-col-"] *):not([class*="bg-[#"] *):not([style*="color: #FFFFFF"]):not([style*="color: #ffffff"]):not([style*="color:#fff"]),
+html[data-theme="jc-brand"] [class*="active:text-white"]:active:not(.bg-accent *):not([class*="bg-status-"] *):not([class*="bg-col-"] *):not([class*="bg-[#"] *):not([style*="color: #FFFFFF"]):not([style*="color: #ffffff"]):not([style*="color:#fff"]),
+html[data-theme="jc-brand"] [class*="hover:text-neutral-"]:hover:not(.bg-accent *):not([class*="bg-status-"] *):not([class*="bg-col-"] *):not([class*="bg-[#"] *):not([style*="color: #FFFFFF"]):not([style*="color: #ffffff"]):not([style*="color:#fff"]),
+html[data-theme="jc-brand"] .group:hover [class*="group-hover:text-neutral-"]:not(.bg-accent *):not([class*="bg-status-"] *):not([class*="bg-col-"] *):not([class*="bg-[#"] *):not([style*="color: #FFFFFF"]):not([style*="color: #ffffff"]):not([style*="color:#fff"]),
+html[data-theme="jc-brand"] [class*="hover:text-slate-"]:hover:not(.bg-accent *):not([class*="bg-status-"] *):not([class*="bg-col-"] *):not([class*="bg-[#"] *):not([style*="color: #FFFFFF"]):not([style*="color: #ffffff"]):not([style*="color:#fff"]),
+html[data-theme="jc-brand"] .group:hover [class*="group-hover:text-slate-"]:not(.bg-accent *):not([class*="bg-status-"] *):not([class*="bg-col-"] *):not([class*="bg-[#"] *):not([style*="color: #FFFFFF"]):not([style*="color: #ffffff"]):not([style*="color:#fff"]) {
   color: #0F172A !important;
 }
 html[data-theme="jc-brand"] [class*="border-white"] {
   border-color: rgba(15, 23, 42, 0.08) !important;
 }
+html[data-theme="jc-brand"] [class*="hover:border-white"]:hover {
+  border-color: rgba(15, 23, 42, 0.22) !important;
+}
 html[data-theme="jc-brand"] [class*="bg-white"] {
   background-color: rgba(15, 23, 42, 0.04) !important;
+}
+html[data-theme="jc-brand"] [class*="hover:bg-white"]:hover {
+  background-color: rgba(15, 23, 42, 0.08) !important;
 }
 html[data-theme="jc-brand"] .bg-dire-wolf\/60 {
   background-color: #F1F5F9 !important;
 }
-html[data-theme="jc-brand"] .bg-accent,
-html[data-theme="jc-brand"] .bg-accent * {
+html[data-theme="jc-brand"] [class*="bg-accent"],
+html[data-theme="jc-brand"] [class*="bg-accent"] * {
   color: #0F172A !important;
 }
 html[data-theme="jc-brand"] .text-accent {
@@ -114,7 +128,7 @@ html[data-theme="jc-brand"] .bg-dire-wolf.border {
   border-color: rgba(15, 23, 42, 0.12) !important;
 }
 html[data-theme="jc-brand"] .bg-dire-wolf.border:hover {
-  border-color: rgba(15, 23, 42, 0.25) !important;
+  border-color: rgba(15, 23, 42, 0.28) !important;
 }
 
 /* Clean light-mode shadows (override dark black shadows & weird hover elevations) */

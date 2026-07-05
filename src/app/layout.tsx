@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Montserrat } from "next/font/google";
 import "./globals.css";
-import Sidebar from "@/components/layout/Sidebar";
+import AppShell from "@/components/layout/AppShell";
 
 const montserrat = Montserrat({
   variable: "--font-montserrat",
@@ -43,10 +43,7 @@ export default function RootLayout({
         />
       </head>
       <body className="h-full bg-sooty text-foreground overflow-hidden">
-        <Sidebar />
-        <main className="ml-0 lg:ml-[250px] h-screen overflow-hidden flex flex-col bg-sooty w-full lg:w-[calc(100%-250px)] transition-all duration-300">
-          {children}
-        </main>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );
