@@ -24,6 +24,24 @@ export default function RootLayout({
       lang="en"
       className={`${montserrat.variable} h-full antialiased overflow-hidden`}
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var savedTheme = localStorage.getItem('loop-theme');
+                  if (savedTheme === 'jc-brand' || savedTheme === 'dark') {
+                    document.documentElement.setAttribute('data-theme', savedTheme);
+                  } else {
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                  }
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
       <body className="h-full bg-sooty text-foreground overflow-hidden">
         <Sidebar />
         <main className="ml-0 lg:ml-[250px] h-screen overflow-hidden flex flex-col bg-sooty w-full lg:w-[calc(100%-250px)] transition-all duration-300">

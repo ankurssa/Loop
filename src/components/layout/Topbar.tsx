@@ -9,6 +9,8 @@ const projectOptions = [
   { value: 'ITDR', label: 'ITDR' },
   { value: 'ISPM', label: 'ISPM' },
   { value: 'General', label: 'General' },
+  { value: 'Cloud Directory', label: 'Cloud Directory' },
+  { value: 'Device Management', label: 'Device Management' },
 ];
 
 interface TopbarProps {
@@ -35,8 +37,21 @@ export default function Topbar({
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-  }, [theme]);
+    const savedTheme = localStorage.getItem('loop-theme') as 'dark' | 'jc-brand';
+    if (savedTheme === 'dark' || savedTheme === 'jc-brand') {
+      setTheme(savedTheme);
+      document.documentElement.setAttribute('data-theme', savedTheme);
+    } else {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  }, []);
+
+  const handleThemeChange = (newTheme: 'dark' | 'jc-brand') => {
+    setTheme(newTheme);
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('loop-theme', newTheme);
+    setProfileMenuOpen(false);
+  };
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -99,84 +114,70 @@ export default function Topbar({
               </div>
 
               {/* 2. Project Selector */}
-              <div className="relative shrink-0">
+              <div className="relative">
                 <button
                   onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl bg-dire-wolf border border-white/[0.06] text-xs font-bold text-white hover:border-white/20 transition-all shadow-sm"
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl bg-dire-wolf border border-white/[0.06] text-white font-bold text-xs hover:border-accent transition-all duration-200 shadow-inner"
                 >
-                  <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-                  <span className="hidden sm:inline">{currentLabel}</span>
-                  <span className="sm:hidden">{currentLabel.split(' ')[0]}</span>
-                  <ChevronDown size={14} className={`text-chestnut transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} />
+                  <span className="max-w-[100px] truncate">{currentLabel}</span>
+                  <ChevronDown size={14} className="text-chestnut" />
                 </button>
 
                 {dropdownOpen && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setDropdownOpen(false)} />
-                    <div className="absolute top-full mt-2 right-0 w-48 bg-dire-wolf border border-white/[0.1] rounded-2xl shadow-2xl shadow-black/60 overflow-hidden z-50 p-1.5 space-y-1">
-                      {projectOptions.map((option) => (
-                        <button
-                          key={option.value}
-                          onClick={() => {
-                            onProjectChange && onProjectChange(option.value);
-                            setDropdownOpen(false);
-                          }}
-                          className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-between ${
-                            selectedProject === option.value
-                              ? 'bg-accent text-white shadow-md shadow-accent/20'
-                              : 'text-chestnut hover:bg-white/[0.04] hover:text-white'
-                          }`}
-                        >
-                          <span>{option.label}</span>
-                          {selectedProject === option.value && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
-                        </button>
-                      ))}
-                    </div>
-                  </>
+                  <div className="absolute right-0 mt-2 w-44 bg-dire-wolf border border-white/[0.08] rounded-2xl shadow-2xl shadow-black/50 py-1.5 z-50 animate-fade-in">
+                    {projectOptions.map((proj) => (
+                      <button
+                        key={proj.value}
+                        onClick={() => {
+                          onProjectChange && onProjectChange(proj.value);
+                          setDropdownOpen(false);
+                        }}
+                        className={`w-full text-left px-3.5 py-2 text-xs font-bold transition-colors flex items-center justify-between ${
+                          selectedProject === proj.value
+                            ? 'bg-accent/15 text-accent'
+                            : 'text-neutral-300 hover:bg-white/[0.04] hover:text-white'
+                        }`}
+                      >
+                        <span>{proj.label}</span>
+                        {selectedProject === proj.value && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
 
-              {/* 3. Add feedback CTA */}
+              {/* 3. Add Feedback CTA */}
               <button
                 onClick={() => setIsAddModalOpen(true)}
-                className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl bg-accent hover:bg-accent-hover text-xs font-bold text-white transition-all shadow-lg shadow-accent/25 shrink-0 active:scale-95"
+                className="flex items-center gap-1.5 bg-accent hover:bg-accent-hover text-white font-extrabold text-xs px-3.5 py-2 rounded-xl shadow-lg shadow-accent/25 hover:shadow-accent/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 shrink-0 cursor-pointer"
               >
-                <Plus size={15} strokeWidth={2.5} />
+                <Plus size={15} strokeWidth={3} />
                 <span className="hidden sm:inline">Add Feedback</span>
-                <span className="sm:hidden">Add</span>
               </button>
             </>
           )}
 
-          {/* 4. User Profile avatar (ALWAYS on the far right across ALL pages!) */}
-          <div
-            ref={profileMenuRef}
-            className="relative shrink-0 pl-2.5 sm:pl-3 border-l border-white/[0.08]"
-          >
+          {/* 4. User Profile Avatar */}
+          <div className="relative pl-1 sm:pl-2 border-l border-white/[0.08] flex items-center" ref={profileMenuRef}>
             <button
               onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-              className={`w-9 h-9 rounded-xl bg-dire-wolf border flex items-center justify-center text-xs font-bold text-white shadow-sm transition-all cursor-pointer group ${
-                profileMenuOpen ? 'border-accent bg-white/[0.08]' : 'border-white/[0.1] hover:border-accent hover:bg-white/[0.06]'
-              }`}
-              title="User Profile (Ankur)"
+              className="w-9 h-9 rounded-xl bg-gradient-to-tr from-accent to-[#F97316] p-[2px] cursor-pointer shadow-md shadow-accent/20 hover:scale-105 active:scale-95 transition-all duration-200"
+              title="User Profile & Settings"
             >
-              <span className="group-hover:scale-105 transition-transform">AK</span>
+              <div className="w-full h-full bg-sooty rounded-[10px] flex items-center justify-center">
+                <span className="text-xs font-extrabold text-white tracking-tighter">AK</span>
+              </div>
             </button>
 
             {/* Profile Dropdown Menu */}
             {profileMenuOpen && (
-              <div className="absolute top-full mt-2.5 right-0 w-64 bg-dire-wolf border border-white/[0.1] rounded-2xl shadow-2xl shadow-black/80 overflow-hidden z-50 p-2 animate-fade-in">
-                {/* User Info Header */}
-                <div className="px-3 py-2.5 border-b border-white/[0.08] mb-1.5 bg-sooty/50 rounded-xl">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-accent/20 border border-accent/40 flex items-center justify-center text-xs font-bold text-white shrink-0">
-                      AK
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-bold text-white truncate">Ankur Kumar</p>
-                      <p className="text-[10px] text-chestnut truncate">ankur@loop.design</p>
-                    </div>
-                  </div>
+              <div className="absolute right-0 top-12 w-56 bg-dire-wolf border border-white/[0.1] rounded-2xl shadow-2xl shadow-black/60 py-2 z-50 animate-fade-in divide-y divide-white/[0.06]">
+                {/* Header: User Info */}
+                <div className="px-3.5 py-2.5 mb-1 bg-sooty/50 mx-1.5 rounded-xl border border-white/[0.04]">
+                  <p className="text-xs font-extrabold text-white truncate">Ankur</p>
+                  <p className="text-[10px] font-medium text-chestnut truncate">ankur@jumpcloud.com</p>
                 </div>
 
                 {/* Item 1: Theme Selector (Dark | JC Brand) */}
@@ -193,10 +194,7 @@ export default function Topbar({
 
                   <div className="grid grid-cols-2 gap-1.5 p-1 bg-sooty rounded-xl border border-white/[0.06]">
                     <button
-                      onClick={() => {
-                        setTheme('dark');
-                        setProfileMenuOpen(false);
-                      }}
+                      onClick={() => handleThemeChange('dark')}
                       className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-bold transition-all ${
                         theme === 'dark'
                           ? 'bg-[#E04F16] text-white shadow-md shadow-[#E04F16]/20'
@@ -208,10 +206,7 @@ export default function Topbar({
                     </button>
 
                     <button
-                      onClick={() => {
-                        setTheme('jc-brand');
-                        setProfileMenuOpen(false);
-                      }}
+                      onClick={() => handleThemeChange('jc-brand')}
                       className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-bold transition-all ${
                         theme === 'jc-brand'
                           ? 'bg-[#41CFCB] text-[#0F172A] shadow-md shadow-[#41CFCB]/25'
