@@ -11,7 +11,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     <>
       {!isAuthPage && <Sidebar />}
       <main
-        className={`h-screen overflow-hidden flex flex-col bg-sooty w-full transition-all duration-300 ${
+        className={`h-screen overflow-hidden flex flex-col bg-sooty w-full transition-all duration-300 relative ${
           isAuthPage ? 'ml-0 w-full' : 'ml-0 lg:ml-[260px] lg:w-[calc(100%-260px)]'
         }`}
       >

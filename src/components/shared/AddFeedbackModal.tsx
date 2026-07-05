@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { FeedbackStatus, Severity, FeedbackSource } from '@/types';
 import { useFeedback } from '@/hooks/useFeedback';
-import { X, Sparkles, Plus, Check, MessageSquare, AlertCircle, Layers } from 'lucide-react';
+import { projects } from '@/data/mockData';
+import { X, Sparkles, Plus, Check } from 'lucide-react';
 
 interface AddFeedbackModalProps {
   isOpen: boolean;
@@ -41,6 +42,16 @@ export default function AddFeedbackModal({
       if (defaultProject !== 'all') setProject(defaultProject);
     }
   }, [isOpen, defaultStatus, defaultProject]);
+
+  // Close on Escape
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -108,7 +119,7 @@ export default function AddFeedbackModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 animate-fade-in select-none">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 animate-fade-in">
       {/* Backdrop */}
       <div className="fixed inset-0 bg-black/80 backdrop-blur-sm" onClick={() => !isSubmitting && onClose()} />
 
@@ -145,11 +156,9 @@ export default function AddFeedbackModal({
                 onChange={(e) => setProject(e.target.value)}
                 className="w-full bg-sooty border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-xs font-bold text-white focus:border-accent focus:outline-none transition-all shadow-inner h-[42px]"
               >
-                <option value="ITDR">ITDR</option>
-                <option value="ISPM">ISPM</option>
-                <option value="Cloud Directory">Cloud Directory</option>
-                <option value="Device Management">Device Management</option>
-                <option value="General">General</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.name}>{p.name}</option>
+                ))}
               </select>
             </div>
 
@@ -193,7 +202,7 @@ export default function AddFeedbackModal({
                 disabled={isTranslating || !rawText.trim()}
                 className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.1] text-xs font-bold text-accent transition-all disabled:opacity-40 disabled:cursor-not-allowed group cursor-pointer shadow-sm"
               >
-                <Sparkles size={14} className={isTranslating ? 'animate-spin' : 'group-hover:scale-11 transition-transform'} />
+                <Sparkles size={14} className={isTranslating ? 'animate-spin' : 'group-hover:scale-110 transition-transform'} />
                 <span>{isTranslating ? 'Translating with AI...' : '✨ Auto-Translate to Plain English'}</span>
               </button>
             </div>

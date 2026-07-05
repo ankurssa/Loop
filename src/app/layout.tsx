@@ -23,6 +23,7 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${montserrat.variable} h-full antialiased overflow-hidden`}
+      suppressHydrationWarning
     >
       <head>
         <script

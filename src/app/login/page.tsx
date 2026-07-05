@@ -11,24 +11,22 @@ import {
   CheckCircle2,
   ShieldCheck,
   KeyRound,
-  Layers,
   Zap,
 } from 'lucide-react';
 
-function LoginContent() {
+function LoginContent({ defaultMode = 'signin' }: { defaultMode?: 'signin' | 'signup' }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialTab = searchParams.get('mode') === 'signup' ? 'signup' : 'signin';
+  const initialTab = searchParams.get('mode') === 'signup' ? 'signup' : defaultMode;
 
   const [activeTab, setActiveTab] = useState<'signin' | 'signup'>(initialTab);
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
 
-  // Form states with default JumpCloud details as requested
-  const [email, setEmail] = useState('anilkumar.mallemuri@jumpcloud.com');
-  const [password, setPassword] = useState('As defined by me');
-  const [displayName, setDisplayName] = useState('Anil Kumar M');
-  const [avatarInitial, setAvatarInitial] = useState('AK');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [avatarInitial, setAvatarInitial] = useState('');
 
   // Sync initials if display name changes
   useEffect(() => {
@@ -47,10 +45,20 @@ function LoginContent() {
     setIsLoading(true);
 
     setTimeout(() => {
+      let finalName = displayName;
+      if (!finalName && email) {
+        const namePart = email.split('@')[0].replace(/[._-]/g, ' ');
+        finalName = namePart.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+      }
+      let finalAvatar = avatarInitial;
+      if (!finalAvatar && finalName) {
+        const parts = finalName.trim().split(/\s+/);
+        finalAvatar = parts.length >= 2 ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase() : parts[0].substring(0, 2).toUpperCase();
+      }
       const userObj = {
-        displayName: displayName || 'Anil Kumar M',
+        displayName: finalName || 'Anil Kumar M',
         email: email || 'anilkumar.mallemuri@jumpcloud.com',
-        avatar: avatarInitial || 'AK',
+        avatar: finalAvatar || 'AK',
       };
       try {
         localStorage.setItem('loop-auth-user', JSON.stringify(userObj));
@@ -78,7 +86,7 @@ function LoginContent() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-sooty flex items-center justify-center p-4 sm:p-6 md:p-10 relative overflow-hidden select-none">
+    <div className="min-h-screen w-full bg-sooty flex items-center justify-center p-4 sm:p-6 md:p-10 relative overflow-hidden">
       {/* Background ambient glowing orbs */}
       <div className="absolute -top-40 -left-40 w-96 h-96 bg-accent/15 rounded-full blur-3xl pointer-events-none animate-pulse" />
       <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-[#7C5CFC]/15 rounded-full blur-3xl pointer-events-none animate-pulse" style={{ animationDelay: '2s' }} />
@@ -105,10 +113,6 @@ function LoginContent() {
 
             {/* Headline */}
             <div className="space-y-3 pt-4">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 text-accent text-xs font-bold tracking-wide uppercase">
-                <Sparkles size={13} />
-                <span>JumpCloud SSO Verified</span>
-              </div>
               <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-snug">
                 Where Design & Engineering Align.
               </h1>
@@ -145,7 +149,7 @@ function LoginContent() {
                 <ShieldCheck size={18} className="text-white" />
               </div>
               <div className="truncate">
-                <p className="text-xs font-bold text-white truncate">JumpCloud Enterprise SSO</p>
+                <p className="text-xs font-bold text-white truncate">Enterprise SSO</p>
                 <p className="text-[10px] text-chestnut truncate">Ready for <span className="text-white font-semibold">Anil Kumar M</span></p>
               </div>
             </div>
@@ -226,7 +230,7 @@ function LoginContent() {
             {/* Username / Email */}
             <div className="space-y-1.5">
               <label className="block text-xs font-bold text-white">
-                {activeTab === 'signin' ? 'JumpCloud Username or Email' : 'Work Email Address'}
+                {activeTab === 'signin' ? 'Username or Work Email' : 'Work Email Address'}
               </label>
               <div className="relative">
                 <Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-chestnut pointer-events-none" />
@@ -235,7 +239,7 @@ function LoginContent() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  placeholder="name@jumpcloud.com"
+                  placeholder="name@company.com"
                   className="w-full bg-sooty border border-white/[0.08] rounded-xl pl-10 pr-3.5 py-2.5 text-xs font-bold text-white placeholder-chestnut/50 focus:border-accent focus:outline-none transition-all h-[42px]"
                 />
               </div>
@@ -254,7 +258,7 @@ function LoginContent() {
               <div className="relative">
                 <KeyRound size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-chestnut pointer-events-none" />
                 <input
-                  type="text"
+                  type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -305,7 +309,7 @@ function LoginContent() {
           {/* Footer note */}
           <div className="mt-6 pt-4 border-t border-white/[0.06] text-center">
             <p className="text-[11px] font-medium text-chestnut">
-              {activeTab === 'signin' ? "Don't have an account yet?" : 'Already have a JumpCloud workspace?'}{' '}
+              {activeTab === 'signin' ? "Don't have an account yet?" : 'Already have a workspace?'}{' '}
               <button
                 type="button"
                 onClick={() => setActiveTab(activeTab === 'signin' ? 'signup' : 'signin')}
@@ -321,10 +325,10 @@ function LoginContent() {
   );
 }
 
-export default function LoginPage() {
+export default function LoginPage({ defaultMode }: { defaultMode?: 'signin' | 'signup' }) {
   return (
     <Suspense fallback={<div className="min-h-screen w-full bg-sooty flex items-center justify-center"><div className="w-8 h-8 border-4 border-accent/30 border-t-accent rounded-full animate-spin" /></div>}>
-      <LoginContent />
+      <LoginContent defaultMode={defaultMode} />
     </Suspense>
   );
 }

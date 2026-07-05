@@ -14,15 +14,12 @@ import {
   MessageSquare,
   Palette,
   FileText,
-  Users,
   ArrowUpRight,
   ArrowDownRight,
   Sparkles,
   Calendar,
-  Layers,
   ChevronRight,
   FolderGit2,
-  Check,
 } from 'lucide-react';
 import { FeedbackItem, FeedbackSource, Severity } from '@/types';
 
@@ -32,6 +29,8 @@ export default function DashboardPage() {
   const [selectedProject, setSelectedProject] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [timeDuration, setTimeDuration] = useState<'7d' | '15d' | '30d' | '90d'>('7d');
+  // Snapshot "now" once per mount so window math is pure during render
+  const [now] = useState(() => Date.now());
 
   // Filter items by project and search query
   const filteredItems = useMemo(() => {
@@ -46,51 +45,60 @@ export default function DashboardPage() {
     });
   }, [items, selectedProject, searchQuery]);
 
-  // Dynamic KPI Calculations based on timeDuration filter
+  const windowDays = { '7d': 7, '15d': 15, '30d': 30, '90d': 90 }[timeDuration];
+
+  // Real KPI calculations for the selected time window (vs. the previous window of equal length)
   const kpiMetrics = useMemo(() => {
-    const totalCount = filteredItems.length;
-    const resolvedCount = filteredItems.filter((i) => i.status === 'resolved' || i.status === 'archived').length;
-    const blockingCount = filteredItems.filter(
-      (i) => i.status === 'open' && i.severity === 'blocking'
-    ).length;
+    const MS_DAY = 1000 * 60 * 60 * 24;
+    const windowStart = now - windowDays * MS_DAY;
+    const prevStart = now - 2 * windowDays * MS_DAY;
 
-    // Scale counts/percentages based on duration to give dynamic visual feedback
-    let scaleFactor = 0.65;
-    let avgTurnaround = '1.8 Days';
-    let turnaroundDiff = '-0.4d';
-    let volumeGrowth = '+18.4%';
+    const currentItems = filteredItems.filter((i) => i.createdAt.getTime() >= windowStart);
+    const prevItems = filteredItems.filter(
+      (i) => i.createdAt.getTime() >= prevStart && i.createdAt.getTime() < windowStart
+    );
 
-    if (timeDuration === '15d') {
-      scaleFactor = 1.0;
-      avgTurnaround = '2.1 Days';
-      turnaroundDiff = '-0.3d';
-      volumeGrowth = '+24.1%';
-    } else if (timeDuration === '30d') {
-      scaleFactor = 1.45;
-      avgTurnaround = '2.3 Days';
-      turnaroundDiff = '-0.5d';
-      volumeGrowth = '+31.8%';
-    } else if (timeDuration === '90d') {
-      scaleFactor = 3.20;
-      avgTurnaround = '2.6 Days';
-      turnaroundDiff = '-0.8d';
-      volumeGrowth = '+42.5%';
-    }
+    const total = currentItems.length;
+    const resolved = currentItems.filter((i) => i.status === 'resolved' || i.status === 'archived').length;
+    const resolutionRate = total > 0 ? Math.round((resolved / total) * 100) : 0;
+    const blocking = currentItems.filter((i) => i.status === 'open' && i.severity === 'blocking').length;
 
-    const displayTotal = Math.max(1, Math.round(totalCount * scaleFactor));
-    const displayResolved = Math.round(resolvedCount * scaleFactor);
-    const resolutionRate = Math.round((displayResolved / displayTotal) * 100) || 72;
+    // Volume growth vs previous window
+    const volumeGrowth =
+      prevItems.length > 0
+        ? Math.round(((total - prevItems.length) / prevItems.length) * 1000) / 10
+        : null;
+
+    // Average turnaround (creation → resolution) for items resolved in each window
+    const avgDays = (list: FeedbackItem[]): number | null => {
+      const done = list.filter((i) => i.resolvedAt);
+      if (done.length === 0) return null;
+      const sum = done.reduce((acc, i) => acc + (i.resolvedAt!.getTime() - i.createdAt.getTime()), 0);
+      return sum / done.length / MS_DAY;
+    };
+    const turnaround = avgDays(
+      filteredItems.filter((i) => i.resolvedAt && i.resolvedAt.getTime() >= windowStart)
+    );
+    const prevTurnaround = avgDays(
+      filteredItems.filter(
+        (i) => i.resolvedAt && i.resolvedAt.getTime() >= prevStart && i.resolvedAt.getTime() < windowStart
+      )
+    );
+    const turnaroundDiff =
+      turnaround !== null && prevTurnaround !== null
+        ? Math.round((turnaround - prevTurnaround) * 10) / 10
+        : null;
 
     return {
-      total: displayTotal,
-      resolved: displayResolved,
-      resolutionRate: Math.min(100, resolutionRate),
-      blocking: blockingCount,
-      avgTurnaround,
+      total,
+      resolved,
+      resolutionRate,
+      blocking,
+      avgTurnaround: turnaround !== null ? `${(Math.round(turnaround * 10) / 10).toFixed(1)} Days` : '—',
       turnaroundDiff,
       volumeGrowth,
     };
-  }, [filteredItems, timeDuration]);
+  }, [filteredItems, windowDays, now]);
 
   // Top 5 Projects KPI Tile Data
   const topProjects = useMemo(() => {
@@ -151,38 +159,41 @@ export default function DashboardPage() {
     ];
   }, [filteredItems]);
 
-  // Daily / Weekly Velocity Bars
-  const velocityDays = useMemo(() => {
-    const days = [];
-    if (timeDuration === '7d') {
-      const baseVolume = [12, 18, 24, 14, 19, 22, 28];
-      for (let i = 0; i < 7; i++) {
-        const vol = baseVolume[i];
-        days.push({ day: `Day ${i + 1}`, label: `D${i + 1}`, volume: vol, heightPercent: Math.min(100, Math.round((vol / 30) * 100)) });
-      }
-    } else if (timeDuration === '15d') {
-      const baseVolume = [8, 12, 15, 9, 18, 24, 14, 19, 22, 11, 16, 28, 20, 15, 26];
-      for (let i = 0; i < 15; i++) {
-        const vol = baseVolume[i];
-        days.push({ day: `Day ${i + 1}`, label: `D${i + 1}`, volume: vol, heightPercent: Math.min(100, Math.round((vol / 30) * 100)) });
-      }
-    } else if (timeDuration === '30d') {
-      // Show 15 bars representing 2-day intervals over 30 days
-      const baseVolume = [14, 22, 19, 28, 32, 24, 38, 42, 31, 29, 45, 36, 48, 52, 40];
-      for (let i = 0; i < 15; i++) {
-        const vol = baseVolume[i];
-        days.push({ day: `Days ${i * 2 + 1}-${i * 2 + 2}`, label: `D${i * 2 + 2}`, volume: vol, heightPercent: Math.min(100, Math.round((vol / 60) * 100)) });
-      }
-    } else {
-      // 90d -> 12 weekly bars
-      const baseVolume = [45, 62, 58, 74, 88, 69, 92, 105, 84, 96, 112, 128];
-      for (let i = 0; i < 12; i++) {
-        const vol = baseVolume[i];
-        days.push({ day: `Week ${i + 1}`, label: `Wk ${i + 1}`, volume: vol, heightPercent: Math.min(100, Math.round((vol / 140) * 100)) });
-      }
-    }
-    return days;
-  }, [timeDuration]);
+  // Real ingestion velocity: bucket item creation dates across the selected window
+  const velocity = useMemo(() => {
+    const MS_DAY = 1000 * 60 * 60 * 24;
+    const bucketCount = { '7d': 7, '15d': 15, '30d': 15, '90d': 12 }[timeDuration];
+    const bucketMs = (windowDays * MS_DAY) / bucketCount;
+    const windowStart = now - windowDays * MS_DAY;
+
+    const counts = new Array(bucketCount).fill(0);
+    filteredItems.forEach((item) => {
+      const t = item.createdAt.getTime();
+      if (t < windowStart) return;
+      const idx = Math.min(bucketCount - 1, Math.floor((t - windowStart) / bucketMs));
+      counts[idx]++;
+    });
+
+    const peak = Math.max(...counts);
+    const bars = counts.map((volume, i) => {
+      const bucketEnd = new Date(windowStart + (i + 1) * bucketMs);
+      const label =
+        timeDuration === '7d'
+          ? bucketEnd.toLocaleDateString('en-US', { weekday: 'short' })
+          : timeDuration === '90d'
+            ? `Wk ${i + 1}`
+            : bucketEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      return {
+        label,
+        volume,
+        heightPercent: peak > 0 ? Math.round((volume / peak) * 100) : 0,
+      };
+    });
+
+    const total = counts.reduce((a, b) => a + b, 0);
+    const avg = Math.round((total / bucketCount) * 10) / 10;
+    return { bars, peak, avg };
+  }, [filteredItems, timeDuration, windowDays, now]);
 
   const durationOptions: { value: '7d' | '15d' | '30d' | '90d'; label: string }[] = [
     { value: '7d', label: '7 Days' },
@@ -192,7 +203,7 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-sooty select-none">
+    <div className="flex flex-col h-screen overflow-hidden bg-sooty">
       {/* Consistent Topbar */}
       <Topbar
         selectedProject={selectedProject}
@@ -214,7 +225,7 @@ export default function DashboardPage() {
               </span>
             </div>
             <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
-              Design Velocity & KPI Overview
+              Design Velocity Overview
             </h1>
             <p className="text-xs text-chestnut mt-0.5">
               Monitor team ingestion rates, resolution velocity, and multi-channel feedback intelligence.
@@ -246,7 +257,10 @@ export default function DashboardPage() {
         {/* 4 Hero KPI Tiles */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {/* Tile 1: Total Ingested */}
-          <div className="bg-dire-wolf p-5 rounded-[24px] border border-white/[0.06] hover:border-white/15 transition-all duration-300 shadow-xl group relative overflow-hidden">
+          <div
+            title="Across all connected channels in selected time window."
+            className="bg-dire-wolf p-5 rounded-[24px] border border-white/[0.06] hover:border-white/15 transition-all duration-300 shadow-xl group relative overflow-hidden"
+          >
             <div className="absolute top-0 right-0 w-32 h-32 bg-accent/5 rounded-full blur-2xl group-hover:bg-accent/10 transition-all pointer-events-none" />
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-bold text-chestnut uppercase tracking-wider">Total Ingested</span>
@@ -256,17 +270,26 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-baseline gap-2.5">
               <span className="text-3xl font-black text-white tracking-tight">{kpiMetrics.total}</span>
-              <span className="text-xs font-extrabold text-emerald-400 flex items-center bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
-                <ArrowUpRight size={13} /> {kpiMetrics.volumeGrowth}
-              </span>
+              {kpiMetrics.volumeGrowth !== null && (
+                <span
+                  className={`text-xs font-extrabold flex items-center px-2 py-0.5 rounded-md border ${
+                    kpiMetrics.volumeGrowth >= 0
+                      ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                      : 'text-red-400 bg-red-500/10 border-red-500/20'
+                  }`}
+                >
+                  {kpiMetrics.volumeGrowth >= 0 ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}
+                  {kpiMetrics.volumeGrowth >= 0 ? '+' : ''}{kpiMetrics.volumeGrowth}%
+                </span>
+              )}
             </div>
-            <p className="text-[11px] text-chestnut mt-2 font-medium">
-              Across all connected channels in last <strong className="text-white">{durationOptions.find(d => d.value === timeDuration)?.label.toLowerCase()}</strong>.
-            </p>
           </div>
 
-          {/* Tile 2: Resolution Velocity */}
-          <div className="bg-dire-wolf p-5 rounded-[24px] border border-white/[0.06] hover:border-white/15 transition-all duration-300 shadow-xl group relative overflow-hidden">
+          {/* Tile 2: Resolution Rate */}
+          <div
+            title={`Resolved ${kpiMetrics.resolved} of ${kpiMetrics.total} total items across all connected channels.`}
+            className="bg-dire-wolf p-5 rounded-[24px] border border-white/[0.06] hover:border-white/15 transition-all duration-300 shadow-xl group relative overflow-hidden"
+          >
             <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl group-hover:bg-emerald-500/10 transition-all pointer-events-none" />
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-bold text-chestnut uppercase tracking-wider">Resolution Rate</span>
@@ -277,7 +300,7 @@ export default function DashboardPage() {
             <div className="flex items-baseline gap-2.5">
               <span className="text-3xl font-black text-white tracking-tight">{kpiMetrics.resolutionRate}%</span>
               <span className="text-xs font-extrabold text-emerald-400 flex items-center bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
-                <ArrowUpRight size={13} /> +6.2%
+                {kpiMetrics.resolved} resolved
               </span>
             </div>
             <div className="w-full bg-sooty h-2 rounded-full mt-3 overflow-hidden border border-white/[0.05]">
@@ -289,7 +312,10 @@ export default function DashboardPage() {
           </div>
 
           {/* Tile 3: Avg Turnaround Time */}
-          <div className="bg-dire-wolf p-5 rounded-[24px] border border-white/[0.06] hover:border-white/15 transition-all duration-300 shadow-xl group relative overflow-hidden">
+          <div
+            title="Time from feedback ingestion to design resolution."
+            className="bg-dire-wolf p-5 rounded-[24px] border border-white/[0.06] hover:border-white/15 transition-all duration-300 shadow-xl group relative overflow-hidden"
+          >
             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl group-hover:bg-blue-500/10 transition-all pointer-events-none" />
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-bold text-chestnut uppercase tracking-wider">Avg. Turnaround</span>
@@ -299,17 +325,26 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-baseline gap-2.5">
               <span className="text-3xl font-black text-white tracking-tight">{kpiMetrics.avgTurnaround}</span>
-              <span className="text-xs font-extrabold text-emerald-400 flex items-center bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
-                <ArrowDownRight size={13} /> {kpiMetrics.turnaroundDiff}
-              </span>
+              {kpiMetrics.turnaroundDiff !== null && (
+                <span
+                  className={`text-xs font-extrabold flex items-center px-2 py-0.5 rounded-md border ${
+                    kpiMetrics.turnaroundDiff <= 0
+                      ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                      : 'text-red-400 bg-red-500/10 border-red-500/20'
+                  }`}
+                >
+                  {kpiMetrics.turnaroundDiff <= 0 ? <ArrowDownRight size={13} /> : <ArrowUpRight size={13} />}
+                  {kpiMetrics.turnaroundDiff > 0 ? '+' : ''}{kpiMetrics.turnaroundDiff}d
+                </span>
+              )}
             </div>
-            <p className="text-[11px] text-chestnut mt-2 font-medium">
-              Time from feedback ingestion to design resolution.
-            </p>
           </div>
 
           {/* Tile 4: Blocking Attention Required */}
-          <div className="bg-dire-wolf p-5 rounded-[24px] border border-white/[0.06] hover:border-white/15 transition-all duration-300 shadow-xl group relative overflow-hidden">
+          <div
+            title="High-priority design issues pending immediate review."
+            className="bg-dire-wolf p-5 rounded-[24px] border border-white/[0.06] hover:border-white/15 transition-all duration-300 shadow-xl group relative overflow-hidden"
+          >
             <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 rounded-full blur-2xl group-hover:bg-red-500/10 transition-all pointer-events-none" />
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-bold text-chestnut uppercase tracking-wider">Blocking Attention</span>
@@ -323,72 +358,66 @@ export default function DashboardPage() {
                 Urgent Action
               </span>
             </div>
-            <p className="text-[11px] text-chestnut mt-2 font-medium">
-              High-priority design issues pending immediate review.
-            </p>
           </div>
         </div>
 
         {/* Row 2: Ingestion Velocity & Top 5 Projects KPI Tile */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Panel 1 (Left 2 Cols): Daily/Weekly Velocity */}
-          <div className="bg-dire-wolf p-6 rounded-[24px] border border-white/[0.06] shadow-2xl flex flex-col justify-between lg:col-span-2">
-            <div>
-              <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-                <div>
-                  <h2 className="text-base font-extrabold text-white tracking-tight flex items-center gap-2">
-                    <TrendingUp size={18} className="text-accent" />
-                    <span>Ingestion Velocity ({durationOptions.find(d => d.value === timeDuration)?.label})</span>
-                  </h2>
-                  <p className="text-xs text-chestnut mt-0.5">
-                    Volume of incoming design feedback over selected timeline.
-                  </p>
-                </div>
-                <span className="text-xs font-bold bg-sooty px-3 py-1 rounded-xl text-chestnut border border-white/[0.05]">
-                  Peak: <strong className="text-white">128 items</strong>
-                </span>
-              </div>
+          <div
+            title={`Volume of incoming design feedback over selected timeline. Average velocity: ${velocity.avg} items / period. Total in window: ${kpiMetrics.total} items.`}
+            className="bg-dire-wolf p-6 rounded-[24px] border border-white/[0.06] shadow-2xl flex flex-col lg:col-span-2"
+          >
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+              <h2 className="text-base font-extrabold text-white tracking-tight flex items-center gap-2">
+                <TrendingUp size={18} className="text-accent" />
+                <span>Ingestion Velocity ({durationOptions.find(d => d.value === timeDuration)?.label})</span>
+              </h2>
+              <span className="text-xs font-bold bg-sooty px-3 py-1 rounded-xl text-chestnut border border-white/[0.05]">
+                Peak: <strong className="text-white">{velocity.peak} item{velocity.peak !== 1 ? 's' : ''}</strong>
+              </span>
+            </div>
 
-              {/* Bar Chart Canvas */}
-              <div className="h-56 flex items-end justify-between gap-1.5 pt-6 pb-2 px-2 border-b border-white/[0.06]">
-                {velocityDays.map((d, i) => (
-                  <div key={i} className="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-extrabold text-white bg-sooty px-1.5 py-0.5 rounded border border-white/[0.1] -mb-1 shadow-md whitespace-nowrap z-10">
-                      {d.volume}
+            {/* Bar Chart Area (flex-1 to grow and fill available card height) */}
+            <div className="flex-1 flex flex-col justify-end min-h-[240px] pt-4">
+              {/* Bars Container with bottom border (x-axis baseline) */}
+              <div className="flex-1 flex items-end justify-between gap-2 px-2 border-b border-white/[0.1] pb-0">
+                {velocity.bars.map((d, i) => (
+                  <div key={i} className="flex-1 flex flex-col items-center justify-end h-full group relative">
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-extrabold text-white bg-sooty px-2 py-1 rounded-md border border-white/[0.15] mb-1.5 shadow-xl whitespace-nowrap absolute -top-8 z-20 pointer-events-none">
+                      {d.volume} {d.volume === 1 ? 'item' : 'items'}
                     </div>
                     <div
-                      className="w-full max-w-[28px] bg-gradient-to-t from-accent/40 to-accent rounded-t-lg group-hover:brightness-125 transition-all duration-300 shadow-md shadow-accent/10"
-                      style={{ height: `${d.heightPercent}%` }}
+                      className="w-full max-w-[36px] bg-gradient-to-t from-accent/50 to-accent rounded-t-lg group-hover:brightness-125 group-hover:from-accent transition-all duration-300 shadow-md shadow-accent/10"
+                      style={{ height: `${Math.max(d.heightPercent, 3)}%` }}
                     />
-                    <span className="text-[10px] font-bold text-chestnut truncate w-full text-center">
-                      {d.label}
-                    </span>
                   </div>
                 ))}
               </div>
-            </div>
 
-            <div className="flex items-center justify-between pt-4 text-xs text-chestnut flex-wrap gap-2">
-              <span>Average velocity: <strong className="text-white">24.6 items / period</strong></span>
-              <span className="text-emerald-400 font-bold">↑ 14% higher than team benchmark</span>
+              {/* X-Axis Labels below the baseline */}
+              <div className="flex items-center justify-between gap-2 px-2 pt-3">
+                {velocity.bars.map((d, i) => (
+                  <span key={i} className="flex-1 text-[11px] font-bold text-chestnut text-center truncate">
+                    {d.label}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
 
           {/* Panel 2 (Right 1 Col): Top 5 Projects KPI Tile (Interactive!) */}
-          <div className="bg-dire-wolf p-6 rounded-[24px] border border-white/[0.06] shadow-2xl flex flex-col justify-between">
+          <div
+            title="Showing top active workspaces by total feedback. Click any project row to view its filtered active board."
+            className="bg-dire-wolf p-6 rounded-[24px] border border-white/[0.06] shadow-2xl flex flex-col justify-between"
+          >
             <div>
-              <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center justify-between mb-4">
                 <h2 className="text-base font-extrabold text-white tracking-tight flex items-center gap-2">
                   <FolderGit2 size={18} className="text-emerald-400" />
                   <span>Top 5 Projects</span>
                 </h2>
-                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-white/[0.08] text-chestnut border border-white/[0.05]">
-                  Interactive
-                </span>
               </div>
-              <p className="text-xs text-chestnut mb-4">
-                Click any project row to view its filtered active board.
-              </p>
 
               {/* Top 5 Projects List */}
               <div className="space-y-2.5">
@@ -427,26 +456,20 @@ export default function DashboardPage() {
                 ))}
               </div>
             </div>
-
-            <div className="mt-4 pt-3 border-t border-white/[0.06] text-center">
-              <span className="text-[11px] text-chestnut">
-                Showing top active workspaces by total feedback
-              </span>
-            </div>
           </div>
         </div>
 
         {/* Row 3: Channel Share & Interactive Category Distribution */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Channel Ingestion Share (1 Col) */}
-          <div className="bg-dire-wolf p-6 rounded-[24px] border border-white/[0.06] shadow-2xl flex flex-col justify-between">
+          <div
+            title={`Where your design feedback originates. Primary source: ${[...channelStats].sort((a, b) => b.count - a.count)[0]?.channel ?? '—'}`}
+            className="bg-dire-wolf p-6 rounded-[24px] border border-white/[0.06] shadow-2xl flex flex-col justify-between"
+          >
             <div>
-              <h2 className="text-base font-extrabold text-white tracking-tight mb-1">
+              <h2 className="text-base font-extrabold text-white tracking-tight mb-5">
                 Channel Ingestion Share
               </h2>
-              <p className="text-xs text-chestnut mb-6">
-                Where your design feedback originates.
-              </p>
 
               <div className="space-y-4">
                 {channelStats.map((ch, idx) => {
@@ -473,29 +496,19 @@ export default function DashboardPage() {
                 })}
               </div>
             </div>
-
-            <div className="mt-6 pt-4 border-t border-white/[0.06] flex items-center justify-between text-xs font-bold text-chestnut">
-              <span>Primary source:</span>
-              <span className="text-white bg-sooty px-2.5 py-1 rounded-lg border border-white/[0.05]">Slack Ingestion</span>
-            </div>
           </div>
 
           {/* Interactive Category Distribution (2 Cols) */}
-          <div className="bg-dire-wolf p-6 rounded-[24px] border border-white/[0.06] shadow-2xl lg:col-span-2 flex flex-col justify-between">
+          <div
+            title="Taxonomy standard: Loop v2.4 Classification. Click any category card to open the Kanban board filtered by that classification."
+            className="bg-dire-wolf p-6 rounded-[24px] border border-white/[0.06] shadow-2xl lg:col-span-2 flex flex-col justify-between"
+          >
             <div>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <h2 className="text-base font-extrabold text-white tracking-tight">
-                      Feedback Category Distribution
-                    </h2>
-                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-accent/15 text-accent border border-accent/20">
-                      Interactive
-                    </span>
-                  </div>
-                  <p className="text-xs text-chestnut mt-0.5">
-                    Click any category card to open the Kanban board filtered by that classification.
-                  </p>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base font-extrabold text-white tracking-tight">
+                    Feedback Category Distribution
+                  </h2>
                 </div>
                 <span className="text-xs font-bold text-chestnut bg-sooty px-3 py-1.5 rounded-xl border border-white/[0.06] self-start sm:self-auto">
                   Total Classified: <strong className="text-white">{filteredItems.length} items</strong>
@@ -534,14 +547,6 @@ export default function DashboardPage() {
                   </div>
                 ))}
               </div>
-            </div>
-
-            <div className="mt-6 pt-4 border-t border-white/[0.06] flex items-center justify-between text-xs text-chestnut">
-              <span>Taxonomy standard: <strong className="text-white">Loop v2.4 Classification</strong></span>
-              <span className="text-accent font-bold flex items-center gap-1">
-                <span>Click card to filter board</span>
-                <ChevronRight size={13} />
-              </span>
             </div>
           </div>
         </div>

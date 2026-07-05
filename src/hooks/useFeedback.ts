@@ -1,121 +1,155 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useSyncExternalStore } from 'react';
 import { FeedbackItem, FeedbackStatus } from '@/types';
 import { feedbackItems as initialMockItems } from '@/data/mockData';
 
 const STORAGE_KEY = 'loop_feedback_items_v1';
 const EVENT_KEY = 'loop-feedback-storage-change';
+const AUTO_ARCHIVE_DAYS = 7;
+
+// Module-level cache shared by every hook instance. All mutations read from and
+// write to this single copy, so two components can never clobber each other's writes.
+let cache: FeedbackItem[] | null = null;
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function reviveItem(item: any): FeedbackItem {
+  return {
+    ...item,
+    description: item.description || item.rawText || item.translatedText || 'No description provided.',
+    translatedDescription: item.translatedDescription || item.translatedText,
+    isTechnical: item.isTechnical !== undefined ? item.isTechnical : Boolean(item.translatedDescription || item.translatedText),
+    isDuplicate: item.isDuplicate || false,
+    createdAt: new Date(item.createdAt),
+    lastUpdated: new Date(item.lastUpdated),
+    resolvedAt: item.resolvedAt ? new Date(item.resolvedAt) : undefined,
+  };
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
+/** Items resolved more than AUTO_ARCHIVE_DAYS ago move to Archived automatically. */
+function applyAutoArchive(items: FeedbackItem[]): { items: FeedbackItem[]; changed: boolean } {
+  const now = Date.now();
+  let changed = false;
+  const result = items.map((item) => {
+    if (item.status === 'resolved' && item.resolvedAt) {
+      const daysResolved = (now - item.resolvedAt.getTime()) / (1000 * 60 * 60 * 24);
+      if (daysResolved >= AUTO_ARCHIVE_DAYS) {
+        changed = true;
+        return { ...item, status: 'archived' as FeedbackStatus };
+      }
+    }
+    return item;
+  });
+  return { items: result, changed };
+}
+
+function persist(items: FeedbackItem[]) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  } catch (err) {
+    console.error('Error saving feedback items to storage:', err);
+  }
+}
+
+function readStore(): FeedbackItem[] {
+  if (cache) return cache;
+  let items: FeedbackItem[];
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    items = stored ? (JSON.parse(stored) as unknown[]).map(reviveItem) : initialMockItems;
+  } catch (err) {
+    console.error('Error loading feedback items from storage:', err);
+    items = initialMockItems;
+  }
+  const archived = applyAutoArchive(items);
+  cache = archived.items;
+  if (archived.changed || !localStorage.getItem(STORAGE_KEY)) {
+    persist(cache);
+  }
+  return cache;
+}
+
+function writeStore(items: FeedbackItem[]) {
+  cache = items;
+  persist(items);
+  window.dispatchEvent(new CustomEvent(EVENT_KEY));
+}
+
+const EMPTY_ITEMS: FeedbackItem[] = [];
+
+function subscribe(callback: () => void) {
+  window.addEventListener(EVENT_KEY, callback);
+  return () => window.removeEventListener(EVENT_KEY, callback);
+}
 
 export function useFeedback() {
-  const [items, setItems] = useState<FeedbackItem[]>([]);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const items = useSyncExternalStore(subscribe, readStore, () => EMPTY_ITEMS);
+  const isLoaded = items !== EMPTY_ITEMS;
 
-  // Load from localStorage or fallback to initial mock data
-  const loadItems = useCallback(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed: any[] = JSON.parse(stored);
-        // Revive date objects and fallback descriptions
-        const revived: FeedbackItem[] = parsed.map((item) => ({
-          ...item,
-          description: item.description || item.rawText || item.translatedText || 'No description provided.',
-          translatedDescription: item.translatedDescription || item.translatedText,
-          isTechnical: item.isTechnical !== undefined ? item.isTechnical : Boolean(item.translatedDescription || item.translatedText),
-          isDuplicate: item.isDuplicate || false,
-          createdAt: new Date(item.createdAt),
-          lastUpdated: new Date(item.lastUpdated),
-          resolvedAt: item.resolvedAt ? new Date(item.resolvedAt) : undefined,
-        }));
-        setItems(revived);
-      } else {
-        setItems(initialMockItems);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(initialMockItems));
-      }
-    } catch (err) {
-      console.error('Error loading feedback items from storage:', err);
-      setItems(initialMockItems);
-    } finally {
-      setIsLoaded(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadItems();
-
-    // Listen for changes from other components/modals
-    const handleStorageChange = () => loadItems();
-    window.addEventListener(EVENT_KEY, handleStorageChange);
-    return () => window.removeEventListener(EVENT_KEY, handleStorageChange);
-  }, [loadItems]);
-
-  // Save to storage and dispatch sync event
-  const saveAndNotify = useCallback((newItems: FeedbackItem[]) => {
-    setItems(newItems);
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(newItems));
-        window.dispatchEvent(new CustomEvent(EVENT_KEY));
-      } catch (err) {
-        console.error('Error saving feedback items to storage:', err);
-      }
-    }
-  }, []);
-
-  // Add new item
   const addItem = useCallback(
-    (newItemData: any) => {
+    (newItemData: Omit<FeedbackItem, 'id' | 'createdAt' | 'lastUpdated' | 'resolvedAt'>) => {
       const newItem: FeedbackItem = {
         ...newItemData,
-        description: newItemData.description || newItemData.rawText || 'No description provided.',
-        translatedDescription: newItemData.translatedDescription || newItemData.translatedText || undefined,
-        isTechnical: newItemData.isTechnical !== undefined ? newItemData.isTechnical : Boolean(newItemData.translatedDescription || newItemData.translatedText),
-        isDuplicate: newItemData.isDuplicate || false,
-        id: `fb-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        id: `fb-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         createdAt: new Date(),
         lastUpdated: new Date(),
-        duplicates: 0,
         resolvedAt: newItemData.status === 'resolved' ? new Date() : undefined,
       };
-
-      const updated = [newItem, ...items];
-      saveAndNotify(updated);
+      writeStore([newItem, ...readStore()]);
       return newItem;
     },
-    [items, saveAndNotify]
+    []
   );
 
-  // Update item status
-  const updateStatus = useCallback(
-    (id: string, newStatus: FeedbackStatus) => {
-      const updated = items.map((item) => {
-        if (item.id === id) {
-          return {
-            ...item,
-            status: newStatus,
-            lastUpdated: new Date(),
-            resolvedAt: newStatus === 'resolved' ? new Date() : item.resolvedAt,
-          };
-        }
-        return item;
-      });
-      saveAndNotify(updated);
-    },
-    [items, saveAndNotify]
-  );
+  const updateStatus = useCallback((id: string, newStatus: FeedbackStatus) => {
+    writeStore(
+      readStore().map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              status: newStatus,
+              lastUpdated: new Date(),
+              resolvedAt: newStatus === 'resolved' ? new Date() : item.resolvedAt,
+            }
+          : item
+      )
+    );
+  }, []);
 
-  // Reset to default mock data (useful for testing/demo)
+  const updateItem = useCallback((id: string, changes: Partial<FeedbackItem>) => {
+    writeStore(
+      readStore().map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              ...changes,
+              lastUpdated: new Date(),
+              resolvedAt:
+                changes.status === 'resolved' && item.status !== 'resolved'
+                  ? new Date()
+                  : item.resolvedAt,
+            }
+          : item
+      )
+    );
+  }, []);
+
+  const deleteItem = useCallback((id: string) => {
+    writeStore(readStore().filter((item) => item.id !== id));
+  }, []);
+
   const resetToDefault = useCallback(() => {
-    saveAndNotify(initialMockItems);
-  }, [saveAndNotify]);
+    writeStore(initialMockItems);
+  }, []);
 
   return {
     items,
     isLoaded,
     addItem,
     updateStatus,
+    updateItem,
+    deleteItem,
     resetToDefault,
   };
 }

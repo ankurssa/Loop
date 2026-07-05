@@ -3,14 +3,11 @@
 import { useState, useEffect } from 'react';
 import { ChevronDown, Search, X, Menu, Plus, Palette, LogOut } from 'lucide-react';
 import AddFeedbackModal from '@/components/shared/AddFeedbackModal';
+import { projects } from '@/data/mockData';
 
 const projectOptions = [
   { value: 'all', label: 'All Projects' },
-  { value: 'ITDR', label: 'ITDR' },
-  { value: 'ISPM', label: 'ISPM' },
-  { value: 'General', label: 'General' },
-  { value: 'Cloud Directory', label: 'Cloud Directory' },
-  { value: 'Device Management', label: 'Device Management' },
+  ...projects.map((p) => ({ value: p.name, label: p.name })),
 ];
 
 interface TopbarProps {

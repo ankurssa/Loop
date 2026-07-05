@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Topbar from '@/components/layout/Topbar';
+import { getSettings, saveSettings } from '@/lib/settings';
 import { Clock, AlertTriangle, MessageSquare, Check, Sparkles, Bell } from 'lucide-react';
 
 export default function SettingsPage() {
@@ -11,7 +12,21 @@ export default function SettingsPage() {
   const [slackChannel, setSlackChannel] = useState('#design-feedback');
   const [savedToast, setSavedToast] = useState(false);
 
+  useEffect(() => {
+    const s = getSettings();
+    setDigestTime(s.digestTime);
+    setStaleThreshold(s.staleThresholdDays);
+    setAutoReply(s.autoReply);
+    setSlackChannel(s.slackChannel);
+  }, []);
+
   const handleSave = () => {
+    saveSettings({
+      digestTime,
+      staleThresholdDays: Math.min(30, Math.max(1, staleThreshold || 5)),
+      autoReply,
+      slackChannel,
+    });
     setSavedToast(true);
     setTimeout(() => setSavedToast(false), 4000);
   };

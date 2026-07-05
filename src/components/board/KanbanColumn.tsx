@@ -30,14 +30,37 @@ export default function KanbanColumn({
   onToggleCollapse,
 }: KanbanColumnProps) {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
   const meta = columnMeta[status] || { label: status, accentClass: 'bg-black-oak', borderClass: 'hover:border-white/20' };
+
+  const dropHandlers = onStatusChange
+    ? {
+        onDragOver: (e: React.DragEvent) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          setIsDragOver(true);
+        },
+        onDragLeave: (e: React.DragEvent) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragOver(false);
+        },
+        onDrop: (e: React.DragEvent) => {
+          e.preventDefault();
+          setIsDragOver(false);
+          const id = e.dataTransfer.getData('text/plain');
+          if (id) onStatusChange(id, status);
+        },
+      }
+    : {};
 
   // ── COLLAPSED STATE ──
   if (isCollapsed) {
     return (
       <div
         onClick={onToggleCollapse}
-        className={`w-14 min-w-[56px] max-w-[56px] shrink-0 bg-dire-wolf/60 hover:bg-dire-wolf rounded-2xl border border-white/[0.06] ${meta.borderClass} transition-all duration-300 flex flex-col items-center py-5 gap-4 cursor-pointer select-none group shadow-lg`}
+        {...dropHandlers}
+        className={`w-14 min-w-[56px] max-w-[56px] shrink-0 bg-dire-wolf/60 hover:bg-dire-wolf rounded-2xl border ${
+          isDragOver ? 'border-accent bg-accent/10' : 'border-white/[0.06]'
+        } ${meta.borderClass} transition-all duration-300 flex flex-col items-center py-5 gap-4 cursor-pointer select-none group shadow-lg`}
         title={`Expand ${meta.label} (${items.length})`}
       >
         {/* Accent dot */}
@@ -66,7 +89,12 @@ export default function KanbanColumn({
 
   // ── EXPANDED STATE (Full width responsive) ──
   return (
-    <div className="flex flex-col min-w-[280px] flex-1 transition-all duration-300">
+    <div
+      {...dropHandlers}
+      className={`flex flex-col min-w-[280px] flex-1 transition-all duration-300 rounded-2xl ${
+        isDragOver ? 'bg-accent/[0.06] outline-2 outline-dashed outline-accent/50 outline-offset-4' : ''
+      }`}
+    >
       {/* Column header */}
       <div className="flex items-center justify-between mb-4 px-3 py-2 rounded-xl bg-dire-wolf/40 border border-white/[0.04] hover:border-white/[0.08] transition-all select-none group">
         <div
@@ -113,7 +141,7 @@ export default function KanbanColumn({
         style={{ maxHeight: 'calc(100vh - 180px)' }}
       >
         {items.map((item) => (
-          <FeedbackCard key={item.id} item={item} onStatusChange={onStatusChange} />
+          <FeedbackCard key={item.id} item={item} onStatusChange={onStatusChange} draggable={Boolean(onStatusChange)} />
         ))}
 
         {items.length === 0 && (

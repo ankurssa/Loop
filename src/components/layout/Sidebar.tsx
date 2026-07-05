@@ -9,17 +9,18 @@ import {
   Archive,
   FileText,
   Settings,
-  Sparkles,
   BarChart3,
 } from 'lucide-react';
 import { getStaleItems, getArchivedItems } from '@/data/mockData';
 import { useFeedback } from '@/hooks/useFeedback';
+import { useSettings } from '@/lib/settings';
 
 export default function Sidebar() {
   const pathname = usePathname();
   const { items } = useFeedback();
+  const settings = useSettings();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const staleCount = getStaleItems(items).length;
+  const staleCount = getStaleItems(items, settings.staleThresholdDays).length;
   const archivedCount = getArchivedItems(items).length;
 
   useEffect(() => {

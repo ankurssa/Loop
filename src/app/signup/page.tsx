@@ -3,5 +3,5 @@
 import LoginPage from '@/app/login/page';
 
 export default function SignUpPage() {
-  return <LoginPage />;
+  return <LoginPage defaultMode="signup" />;
 }

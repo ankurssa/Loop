@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { getDigestData, getDaysSinceUpdate, searchItems, projects } from '@/data/mockData';
 import { useFeedback } from '@/hooks/useFeedback';
+import { useSettings } from '@/lib/settings';
 import Badge from '@/components/ui/Badge';
 import StatusIndicator from '@/components/shared/StatusIndicator';
 import Topbar from '@/components/layout/Topbar';
@@ -49,6 +50,7 @@ const quickRecipients = ['#design-team', '#product-updates', '@alex.chen', '@pri
 
 export default function DigestPage() {
   const { items } = useFeedback();
+  const settings = useSettings();
   const [selectedProject, setSelectedProject] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -58,7 +60,7 @@ export default function DigestPage() {
       : items.filter((item) => item.project === selectedProject);
 
   const filteredItems = searchItems(projectFiltered, searchQuery);
-  const digest = getDigestData(filteredItems);
+  const digest = getDigestData(filteredItems, settings.staleThresholdDays);
 
   // Slack Modal & Toast State
   const [slackModalOpen, setSlackModalOpen] = useState(false);
@@ -66,6 +68,16 @@ export default function DigestPage() {
   const [note, setNote] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Close Slack modal on Escape
+  useEffect(() => {
+    if (!slackModalOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !isSending) setSlackModalOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [slackModalOpen, isSending]);
 
   const handleSendToSlack = (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,7 +122,7 @@ export default function DigestPage() {
               style={{ color: '#FFFFFF' }}
               className="flex items-center gap-2.5 px-5 py-2.5 rounded-xl bg-[#4A154B] hover:bg-[#611f69] border border-[#7C5CFC]/50 text-xs font-bold transition-all shadow-xl hover:shadow-[#7C5CFC]/30 group shrink-0 cursor-pointer"
             >
-              <div className="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center group-hover:scale-11 transition-transform">
+              <div className="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
                 <MessageSquare size={13} style={{ color: '#FFFFFF' }} className="text-white" />
               </div>
               <span className="font-bold tracking-wide" style={{ color: '#FFFFFF' }}>Share Digest via Slack...</span>

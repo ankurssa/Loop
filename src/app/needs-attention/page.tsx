@@ -3,17 +3,19 @@
 import { useState } from 'react';
 import { getStaleItems, getDaysSinceUpdate, searchItems, projects } from '@/data/mockData';
 import { useFeedback } from '@/hooks/useFeedback';
+import { useSettings } from '@/lib/settings';
 import Badge from '@/components/ui/Badge';
 import StatusIndicator from '@/components/shared/StatusIndicator';
 import Topbar from '@/components/layout/Topbar';
-import { AlertTriangle, Clock, Send } from 'lucide-react';
+import { Clock, Send } from 'lucide-react';
 
 export default function NeedsAttentionPage() {
-  const { items } = useFeedback();
+  const { items, updateItem } = useFeedback();
+  const settings = useSettings();
   const [selectedProject, setSelectedProject] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const staleItems = getStaleItems(items);
+  const staleItems = getStaleItems(items, settings.staleThresholdDays);
 
   const projectFiltered =
     selectedProject === 'all'
@@ -22,10 +24,9 @@ export default function NeedsAttentionPage() {
 
   const filteredStaleItems = searchItems(projectFiltered, searchQuery);
 
-  const itemsWithNudge = filteredStaleItems.map((item, i) => ({
-    ...item,
-    nudgeSent: i === 0,
-  }));
+  const handleSendNudge = (id: string) => {
+    updateItem(id, { nudgeSent: true });
+  };
 
   return (
     <>
@@ -43,7 +44,7 @@ export default function NeedsAttentionPage() {
           <div>
             <h1 className="text-lg font-bold text-white mb-1">Stale Items</h1>
             <p className="text-xs text-chestnut">
-              {filteredStaleItems.length} item{filteredStaleItems.length !== 1 ? 's' : ''} haven&apos;t been updated in 5+ days
+              {filteredStaleItems.length} item{filteredStaleItems.length !== 1 ? 's' : ''} haven&apos;t been updated in {settings.staleThresholdDays}+ days
             </p>
           </div>
           <div className="w-10 h-10 rounded-2xl bg-status-minor/15 border border-status-minor/30 flex items-center justify-center text-status-minor font-bold text-sm">
@@ -53,7 +54,7 @@ export default function NeedsAttentionPage() {
 
         {/* List */}
         <div className="flex-1 overflow-y-auto pr-2 pb-6 flex flex-col gap-3">
-          {itemsWithNudge.map((item) => {
+          {filteredStaleItems.map((item) => {
             const project = projects.find((p) => p.name === item.project);
             const daysSinceUpdate = getDaysSinceUpdate(item.lastUpdated);
 
@@ -94,7 +95,11 @@ export default function NeedsAttentionPage() {
                   {item.nudgeSent ? (
                     <Badge variant="nudge" label="Nudge sent" />
                   ) : (
-                    <button className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/[0.06] border border-white/[0.08] text-xs font-bold text-chestnut hover:text-white hover:bg-white/[0.1] transition-all cursor-not-allowed opacity-60">
+                    <button
+                      onClick={() => handleSendNudge(item.id)}
+                      className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/[0.06] border border-white/[0.08] text-xs font-bold text-chestnut hover:text-white hover:bg-white/[0.1] transition-all cursor-pointer"
+                      title={`Send a Slack reminder to ${item.author}`}
+                    >
                       <Send size={12} />
                       <span>Send nudge</span>
                     </button>

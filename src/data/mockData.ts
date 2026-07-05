@@ -5,6 +5,8 @@ export const projects: Project[] = [
   { id: 'itdr', name: 'ITDR', color: '#B55933' },
   { id: 'ispm', name: 'ISPM', color: '#4E9AF1' },
   { id: 'general', name: 'General', color: '#52B788' },
+  { id: 'cloud-directory', name: 'Cloud Directory', color: '#7C5CFC' },
+  { id: 'device-management', name: 'Device Management', color: '#F2A93B' },
 ];
 
 // ── Helper: relative date ──
@@ -419,7 +421,7 @@ export function searchItems(items: FeedbackItem[], query: string): FeedbackItem[
 }
 
 // ── Digest Data ──
-export function getDigestData(sourceItems = feedbackItems): DigestData {
+export function getDigestData(sourceItems = feedbackItems, staleThresholdDays = 5): DigestData {
   const today = new Date();
   const dateStr = today.toLocaleDateString('en-US', {
     weekday: 'long',
@@ -442,6 +444,6 @@ export function getDigestData(sourceItems = feedbackItems): DigestData {
         (new Date().getTime() - item.createdAt.getTime()) / (1000 * 60 * 60);
       return hoursSinceCreated <= 24;
     }),
-    staleItems: getStaleItems(sourceItems, 5),
+    staleItems: getStaleItems(sourceItems, staleThresholdDays),
   };
 }
